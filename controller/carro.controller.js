@@ -1,160 +1,192 @@
 const { response } = require("express");
-const req = require("express/lib/request");
+const { Op } = require("sequelize");
+
 const { Carro, iniciarTablaCarro } = require("../models/carro");
 const { Producto } = require("../models/producto");
 
-
 const agregarProductoCarro = async (req, res = response) => {
+  const { id } = req.query;
+  const { IdAgregarProducto } = req.body;
 
-    const {id} = req.query;
-    const {IdAgregarProducto} = req.body;
+  try {
+    iniciarTablaCarro();
 
-    let carro;
+    
+    const producto = await Carro.findOne({
+      where: {
+        [Op.and]: [{ idProductos: IdAgregarProducto }, { idUsuario: id }],
+      },
+    });
+    //Recuperar nombre del producto
+    let nombre = await Producto.findOne({
+      where: {
+        idProducto: IdAgregarProducto,
+      },
+    });
 
-    try {
-        iniciarTablaCarro();
+    let precio = await Producto.findOne({
+      where: {
+        idProducto: IdAgregarProducto,
+      },
+    });
+    nombre = nombre.getDataValue("nombre");
+    precio = precio.getDataValue("precio");
 
-        if(IdAgregarProducto){
-            //Recuperar nombre del producto
-            let nombre = await Producto.findOne({
-                where: {
-                    idProducto : IdAgregarProducto
-                }
-            });
+    console.log(producto);
 
-            let precio = await Producto.findOne({
-                where: {
-                    idProducto: IdAgregarProducto
-                }
-            })
-            nombre = nombre.getDataValue('nombre');
-            precio = precio.getDataValue('precio');
+    let carro = new Carro();
 
-            console.log(precio);
+    if (!producto) {
+      const carro = await Carro.create(
+        {
+          idUsuario: id,
+          nombreProducto: nombre,
+          idProductos: IdAgregarProducto,
+          precio: precio,
+          cantidad: 1,
+        },
+        {
+          include: [Producto],
+        }
+      );
+      //Listar nombres de todos los productos del carrito
+      const productos = await Carro.findAll({
+        where: {
+          idUsuario: id,
+        },
+        attributes: ["nombreProducto", "idCarro", "precio", "cantidad"],
+      });
 
-            //Sumar producto al carro
-            carro = await Carro.create({
-                idUsuario: id,
-                nombreProducto: nombre,
-                idProductos: IdAgregarProducto,
-                precio: precio
-            }, {
-             include: [ Producto ]
-            });
+      return res.json({
+        carro,
+        productos,
+      });
 
-        } 
+    } else {
+      await producto.increment("cantidad");
 
-        //Listar nombres de todos los productos del carrito
-        const productos = await Carro.findAll({
-            where: {
-                idUsuario: id
-            },
-            attributes: ['nombreProducto', 'idCarro', 'precio']
-        })
-
-        res.json({
-            carro,
-            productos
-        });
-
-    } catch (error) {
-        console.log(error)
-        res.status(500).json(error);
+      const productos = await Carro.findAll({
+        where: {
+          idUsuario: id,
+        },
+        attributes: ["nombreProducto", "idCarro", "precio", "cantidad"],
+      });
+      return res.json({
+        carro,
+        productos,
+      });
     }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(error);
+  }
+};
 
-}
+
+
 
 const eliminarProductoCarro = async (req, res = response) => {
+  const { id } = req.query;
+  const { idEliminarProducto } = req.body;
 
-    const {id} = req.query;
-    const {idEliminarProducto} = req.body;
-
-    //Eliminar Producto del carro
-    if (idEliminarProducto) {
-        const eliminarProducto = await Carro.destroy({
-            where: {
-                idCarro: idEliminarProducto
-            }
-        })   
-    }
-    //Listar nombres de todos los productos del carrito
-    const productos = await Carro.findAll({
-        where: {
-            idUsuario: id
-        },
-        attributes: ['nombreProducto', 'idCarro', 'precio']
-    })
-
-    res.json({
-        productos
+  try {
+    let producto = await Carro.findOne({
+      where: {
+        [Op.and]: [{ idProductos: idEliminarProducto }, { idUsuario: id }],
+      },
     });
 
-}
+    let cantidad = producto.getDataValue("cantidad");
 
+    console.log(cantidad);
 
+    if (cantidad > 1) {
+      await producto.increment({cantidad: -1});
+    
+      //Listar nombres de todos los productos del carrito
+      const productos = await Carro.findAll({
+        where: {
+          idUsuario: id,
+        },
+        attributes: ["nombreProducto", "idCarro", "precio", "cantidad"],
+      });
+
+      return res.json({
+        productos,
+      });
+
+    } else {
+      await producto.destroy();
+      //Listar nombres de todos los productos del carrito
+      const productos = await Carro.findAll({
+        where: {
+          idUsuario: id,
+        },
+        attributes: ["nombreProducto", "idCarro", "precio", 'cantidad'],
+      });
+
+      return res.json({
+        productos,
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 const eliminarCarro = async (req, res = response) => {
+  const { id } = req.params;
 
-    const {id} = req.params;
+  try {
+    const carro = await Carro.destroy({
+      where: {
+        idUsuario: id,
+      },
+    });
 
-    try {
-        
-        const carro = await Carro.destroy({
-            where: {
-                idUsuario: id
-            }
-        })
-
-        res.json({
-            msg: `Carro eliminado con exito - ID de usuario: ${id}`,
-            carro
-        })
-
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).json(error)
-    }
-
-}
-
+    res.json({
+      msg: `Carro eliminado con exito - ID de usuario: ${id}`,
+      carro,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json(error);
+  }
+};
 
 const obtenerCarro = async (req, res = response) => {
+  const { id } = req.params;
 
-    const {id} = req.params;
+  const carro = await Carro.findOne({
+    where: {
+      idUsuario: id,
+    },
+  });
 
-    const carro = await Carro.findOne({
-        where: {
-            idUsuario: id
-        }
-    })
+  //Listar nombres de todos los productos del carrito
+  const productos = await Carro.findAll({
+    where: {
+      idUsuario: id,
+    },
+    attributes: ["nombreProducto", "idCarro", "precio"],
+  });
 
-    //Listar nombres de todos los productos del carrito
-    const productos = await Carro.findAll({
-        where: {
-            idUsuario: id
-        },
-        attributes: ['nombreProducto', 'idCarro', 'precio']
-    })
-    
-    res.json({
-        carro,
-        productos
-    });
-}
+  res.json({
+    carro,
+    productos,
+  });
+};
 
 const obtenerCarros = async (req, res = response) => {
+  const carros = await Carro.findAndCountAll();
 
-    const carros = await Carro.findAndCountAll();
-
-    res.json(carros)
-
-}
+  res.json(carros);
+};
 
 module.exports = {
-    agregarProductoCarro,
-    eliminarCarro,
-    eliminarProductoCarro,
-    obtenerCarro,
-    obtenerCarros
-}
+  agregarProductoCarro,
+  eliminarCarro,
+  eliminarProductoCarro,
+  obtenerCarro,
+  obtenerCarros,
+};

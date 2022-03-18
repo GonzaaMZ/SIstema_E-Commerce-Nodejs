@@ -1,8 +1,12 @@
 const { response } = require("express");
+
 const { MontoTotal } = require("../helpers/sumar-monto");
+
 const { Carro } = require("../models/carro");
 const { Orden, iniciarTablaOrden } = require("../models/orden");
 
+
+//Create
 const crearOrden = async (req, res = response) => {
 
     const {idUsuario} = req.body;
@@ -34,6 +38,7 @@ const crearOrden = async (req, res = response) => {
     }
 }
 
+//Delete
 const eliminarOrden = async (req, res = response) => {
 
     const {id} = req.params;
@@ -59,6 +64,8 @@ const eliminarOrden = async (req, res = response) => {
 
 }
 
+
+//Get 
 const obtenerOrden = async (req, res = response) => {
     
     const {id} = req.params;
@@ -81,6 +88,7 @@ const obtenerOrden = async (req, res = response) => {
 
 }
 
+//Get all
 const obtenerOrdenes = async (req, res = response) => {
 
     try {

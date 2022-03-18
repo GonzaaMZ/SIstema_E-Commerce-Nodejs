@@ -1,4 +1,5 @@
 const { response } = require("express");
+
 const { iniciarTablaCategoria, Categoria } = require("../models/categoria")
 
 

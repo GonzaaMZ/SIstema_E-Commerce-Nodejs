@@ -41,6 +41,14 @@ const Carro = db.define('Carro', {
         type: DataTypes.DOUBLE
     },
 
+    cantidad: {
+        type: DataTypes.INTEGER,
+        get(){
+            const rawValue = this.getDataValue('cantidad');
+            return rawValue ? rawValue : null;
+        }
+    },
+
     estado: {
         type: DataTypes.STRING
     }

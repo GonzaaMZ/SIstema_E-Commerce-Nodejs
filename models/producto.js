@@ -55,7 +55,7 @@ const Producto = db.define('Producto', {
         type: DataTypes.DOUBLE,
         allowNull: false,
         get(){
-            const rawValue = this.getDataValue('precios');
+            const rawValue = this.getDataValue('precio');
             return rawValue ? rawValue : null;
         }
     },
